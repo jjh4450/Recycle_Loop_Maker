@@ -5,8 +5,8 @@
     { "id": "rest",         "name": "쉼표",          "role": "rest",   "category": "rest",   "pitched": false },
     { "id": "marker_start", "name": "시작점",        "role": "marker", "category": "marker", "pitched": false, "img": "/img/marker_start.svg" },
     { "id": "marker_stop",  "name": "중단점",        "role": "marker", "category": "marker", "pitched": false, "img": "/img/marker_stop.svg" },
-    { "id": "repeat_start", "name": "도돌이표 시작", "role": "marker", "category": "marker", "pitched": false, "img": "/img/repeat_start.svg" },
-    { "id": "repeat_end",   "name": "도돌이표 끝",   "role": "marker", "category": "marker", "pitched": false, "img": "/img/repeat_end.svg" },
+    { "id": "repeat_start", "name": "1회만 반복 시작", "role": "marker", "category": "marker", "pitched": false, "img": "/img/repeat_start.svg" },
+    { "id": "repeat_end",   "name": "1회만 반복 끝",   "role": "marker", "category": "marker", "pitched": false, "img": "/img/repeat_end.svg" },
     { "id": "loop_start",   "name": "무한반복 시작", "role": "marker", "category": "marker", "pitched": false, "img": "/img/loop_start.svg" },
     { "id": "loop_end",     "name": "무한반복 끝",   "role": "marker", "category": "marker", "pitched": false, "img": "/img/loop_end.svg" }
   ]

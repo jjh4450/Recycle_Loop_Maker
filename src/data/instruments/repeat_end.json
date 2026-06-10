@@ -1,6 +1,6 @@
 {
   "id": "repeat_end",
-  "name": "도돌이표 끝",
+  "name": "1회만 반복 끝",
   "role": "marker",
   "category": "marker",
   "marker": "repeat_end",

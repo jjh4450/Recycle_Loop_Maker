@@ -1,6 +1,6 @@
 {
   "id": "repeat_start",
-  "name": "도돌이표 시작",
+  "name": "1회만 반복 시작",
   "role": "marker",
   "category": "marker",
   "marker": "repeat_start",
