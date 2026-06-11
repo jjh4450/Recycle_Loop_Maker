@@ -531,6 +531,67 @@ try {
   report('T8-7 도돌이표 재생 (9→6 1회 되감기 후 통과)', true, seq);
 } catch (e) { report('T8 재생', false, e.message); }
 
+// ───────── T10: WAV 내보내기 (오프라인 렌더) ─────────
+try {
+  await resetAll();
+  await placeAt('marker_start', 1, 39); // 마커는 소리 없이 시작점만
+  await placeAt('blow_bottle', 2, 39);
+  await placeAt('blow_bottle', 5, 43);
+
+  // (a) 앱 내부 오프라인 렌더 → 실제 오디오(비무음)인지 채널 데이터로 확인
+  const render = await page.evaluate(async () => {
+    const mod = await import('/src/io/wavExport.js');
+    const { playback, objects } = window.__recycloop;
+    const buf = await mod.renderProjectToBuffer(playback, objects);
+    const ch = buf.getChannelData(0);
+    let peak = 0, nonzero = 0;
+    for (let i = 0; i < ch.length; i++) {
+      const a = Math.abs(ch[i]);
+      if (a > peak) peak = a;
+      if (a > 1e-4) nonzero++;
+    }
+    return { duration: buf.duration, sampleRate: buf.sampleRate, channels: buf.numberOfChannels, peak, nonzeroRatio: nonzero / ch.length };
+  });
+  report('T10-1 오프라인 렌더 버퍼 (44.1k/스테레오)', render.duration > 1.5 && render.sampleRate === 44100 && render.channels === 2, JSON.stringify({ d: +render.duration.toFixed(2), sr: render.sampleRate, ch: render.channels }));
+  report('T10-2 실제 오디오 렌더 (비무음)', render.peak > 0.01 && render.nonzeroRatio > 0.01, `peak=${render.peak.toFixed(3)}, nonzero=${(render.nonzeroRatio * 100).toFixed(1)}%`);
+
+  // (b) 버튼 클릭 → WAV 파일 다운로드 + 헤더/파일명 검증
+  const downloadP = page.waitForEvent('download', { timeout: 30000 });
+  await page.click('#btn-export');
+  const download = await downloadP;
+  const bytes = fs.readFileSync(await download.path());
+  const okName = /^recycloop-\d{8}-\d{6}\.wav$/.test(download.suggestedFilename());
+  const riff = bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WAVE';
+  report('T10-3 WAV 다운로드 + 파일명', okName, download.suggestedFilename());
+  report('T10-4 WAV 헤더(RIFF/WAVE) + 크기', riff && bytes.length > 44 + 1000, `bytes=${bytes.length}, riff=${riff}`);
+  report('T10-5 버튼 상태 복구 (재활성화)', await hook(() => {
+    const b = document.getElementById('btn-export');
+    return !b.disabled && b.textContent === 'WAV 내보내기';
+  }));
+
+  // (c) 소리 없는 프로젝트(마커만) → 명확한 에러
+  await resetAll();
+  await placeAt('marker_start', 1, 39);
+  const emptyErr = await page.evaluate(async () => {
+    const mod = await import('/src/io/wavExport.js');
+    const { playback, objects } = window.__recycloop;
+    try { await mod.renderProjectToBuffer(playback, objects); return 'no-error'; }
+    catch (e) { return e.message; }
+  });
+  report('T10-6 소리없는 프로젝트 거부', emptyErr.includes('악기가 없습니다'), emptyErr);
+
+  // (d) buildColumnTimeline: 무한반복도 유한하게 종료되는지 (export 핵심 안전장치)
+  const finite = await page.evaluate(async () => {
+    const mod = await import('/src/io/wavExport.js');
+    const tl = mod.buildColumnTimeline({ loopStart: 0, loopEnd: 8, breakpoint: null, repeatStart: null, repeatEnd: null, infiniteStart: 2, infiniteEnd: 5 });
+    return { len: tl.length, last: tl[tl.length - 1], seq: tl.join(',') };
+  });
+  // 0,1,2,3,4,5,→2,3,4,5,6,7,8 : 무한반복 1회만 반영 후 끝까지 진행
+  report('T10-7 무한반복 유한 종료 (export)', finite.last === 8 && finite.len < 50 && finite.seq === '0,1,2,3,4,5,2,3,4,5,6,7,8', JSON.stringify(finite));
+
+  await resetAll();
+} catch (e) { report('T10 WAV 내보내기', false, e.message); await resetAll().catch(() => {}); }
+
 // ───────── 마무리: 에러 수집 ─────────
 const ignorable = /Autoplay|AudioContext was not allowed|favicon\.ico/i;
 const realConsoleErrors = consoleErrors.filter(t => !ignorable.test(t));

@@ -1,6 +1,7 @@
 import { saveAs } from 'file-saver';
 import { showToast } from '../Toast.js';
 import { serializeProject, parseProject, makeProjectFileName } from '../../io/projectIO.js';
+import { exportProjectToWav } from '../../io/wavExport.js';
 
 export function setupPlaybackControls(playback, objects) {
   const playBtn = document.getElementById('btn-play');
@@ -120,6 +121,29 @@ export function setupFileControls(playback, objects, selection, grid, clearInstr
     objects.reset();
     selection.reset();
     clearInstrumentState();
+  });
+
+  const exportBtn = document.getElementById('btn-export');
+  let exporting = false;
+  exportBtn?.addEventListener('click', async () => {
+    if (exporting) return;
+    exporting = true;
+    playback.stop(); // 실시간 재생과 오프라인 렌더가 겹치지 않게 정지
+    const prevLabel = exportBtn.textContent;
+    exportBtn.disabled = true;
+    exportBtn.textContent = '렌더링 중...';
+    showToast('WAV 렌더링 중...');
+    try {
+      const { fileName, seconds } = await exportProjectToWav(playback, objects);
+      showToast(`WAV 내보내기 완료 (${seconds.toFixed(1)}초) — ${fileName}`);
+    } catch (err) {
+      console.error('WAV 내보내기 실패:', err);
+      showToast(err.message ?? 'WAV 내보내기에 실패했습니다.');
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = prevLabel;
+      exporting = false;
+    }
   });
 }
 
